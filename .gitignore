@@ -1,0 +1,13 @@
+# Curly state files
+.curly-state*
+*.curly-state
+
+# Temporary files
+*.tmp
+*.swp
+*.bak
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
