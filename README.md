@@ -1,15 +1,14 @@
-# Curly - HTTP API Chaining Tool
+# Curly - Curl Wrapper with Templates and Output Saving
 
-Curly is a powerful bash script that enables you to chain HTTP API calls together by saving response values and using them in subsequent requests through a simple template syntax.
+Curly is a curl wrapper that adds templated variables and the ability to save response values for reuse in subsequent requests.
 
 ## Features
 
-- 🔗 **Chain API Calls**: Save values from responses and use them in future requests
 - 📝 **Template Variables**: Use `{{variable}}` syntax in URLs, headers, and request bodies
-- 💾 **Persistent State**: Variables are saved locally in `.curly-state` file
-- 🎨 **Pretty Output**: Automatic JSON formatting with color-coded messages
-- 🔧 **Simple CLI**: Intuitive command-line interface similar to curl
-- 🚀 **Zero Config**: Works out of the box with just bash, curl, and jq
+- 💾 **Save Response Values**: Extract and save values from responses using jq expressions in `.curly-state` file
+- 🔄 **Variable Reuse**: Use saved values in subsequent requests through templates
+- 🎨 **JSON Formatting**: Automatic JSON formatting with colored output
+- **Simple Requirements**: Works with bash, curl, and jq
 
 ## Prerequisites
 
@@ -20,36 +19,27 @@ Curly requires the following tools to be installed:
 - **jq** - for parsing JSON responses
 
 Check if you have them:
+
 ```bash
 curl --version
 jq --version
 ```
 
-Install missing dependencies:
-```bash
-# On Ubuntu/Debian
-sudo apt-get install curl jq
-
-# On macOS
-brew install curl jq
-
-# On RHEL/CentOS/Fedora
-sudo yum install curl jq
-```
-
 ## Installation
 
 1. Clone or download the curly script:
+
 ```bash
 # Clone this repository
-git clone https://github.com/yourusername/curly.git
+git clone https://github.com/michaldziurowski/curly.git
 
 # Or download directly
-wget https://raw.githubusercontent.com/yourusername/curly/main/curly
+wget https://raw.githubusercontent.com/michaldziurowski/curly/master/curly
 chmod +x curly
 ```
 
 2. Run curly from its directory:
+
 ```bash
 cd curly
 ./curly --help
@@ -91,30 +81,31 @@ cd curly
 ```
 
 #### HTTP Methods
+
 - `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS`
 
 #### Options
 
-| Option | Description | Example |
-|--------|-------------|---------|
-| `-d, --data <json>` | Request body (JSON) | `-d '{"name":"John"}'` |
+| Option                  | Description              | Example                            |
+| ----------------------- | ------------------------ | ---------------------------------- |
+| `-d, --data <json>`     | Request body (JSON)      | `-d '{"name":"John"}'`             |
 | `-H, --header <header>` | HTTP header (repeatable) | `-H 'Authorization: Bearer token'` |
-| `-s, --save <var=jq>` | Save response value | `-s 'id=.data.id'` |
-| `-o, --output <file>` | Save response to file | `-o response.json` |
-| `-v, --verbose` | Show debug information | `-v` |
-| `-q, --quiet` | Suppress response output | `-q` |
-| `--timeout <seconds>` | Request timeout | `--timeout 60` |
-| `--no-format` | Don't format JSON output | `--no-format` |
+| `-s, --save <var=jq>`   | Save response value      | `-s 'id=.data.id'`                 |
+| `-o, --output <file>`   | Save response to file    | `-o response.json`                 |
+| `-v, --verbose`         | Show debug information   | `-v`                               |
+| `-q, --quiet`           | Suppress response output | `-q`                               |
+| `--timeout <seconds>`   | Request timeout          | `--timeout 60`                     |
+| `--no-format`           | Don't format JSON output | `--no-format`                      |
 
 #### State Management
 
-| Command | Description |
-|---------|-------------|
-| `--list` | List all saved variables |
-| `--clear` | Clear all saved variables |
-| `--set <var=value>` | Manually set a variable |
-| `--unset <var>` | Remove a specific variable |
-| `--state-file <path>` | Use alternate state file |
+| Command               | Description                |
+| --------------------- | -------------------------- |
+| `--list`              | List all saved variables   |
+| `--clear`             | Clear all saved variables  |
+| `--set <var=value>`   | Manually set a variable    |
+| `--unset <var>`       | Remove a specific variable |
+| `--state-file <path>` | Use alternate state file   |
 
 ### Template Variables
 
@@ -170,6 +161,7 @@ cat .curly-state
 ```
 
 Format:
+
 ```
 token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 user_id=42
@@ -319,6 +311,7 @@ Use verbose mode to see detailed information:
 ```
 
 This shows:
+
 - Template replacements
 - Full curl command
 - HTTP status codes
@@ -326,7 +319,7 @@ This shows:
 
 ### Handling Errors
 
-Curly provides clear error messages:
+Error messages:
 
 ```bash
 # Missing variable
@@ -406,33 +399,39 @@ api_request POST /projects -d '{"name":"New Project"}'
 ## Tips and Best Practices
 
 1. **Organize State Files**: Use different state files for different environments or projects
+
    ```bash
    ./curly GET api.com --state-file .curly-dev
    ./curly GET api.com --state-file .curly-prod
    ```
 
 2. **Clear State Regularly**: Clear variables when starting new workflows
+
    ```bash
    ./curly --clear
    ```
 
 3. **Use Verbose Mode for Debugging**: Add `-v` when troubleshooting
+
    ```bash
    ./curly GET api.com -v
    ```
 
 4. **Save Complete Responses**: Use `-o` to save full responses for reference
+
    ```bash
    ./curly GET api.com -o response.json
    ```
 
 5. **Chain Commands**: Use `&&` to chain dependent requests
+
    ```bash
    ./curly POST api.com/login -s 'token=.token' && \
    ./curly GET api.com/profile -H 'Auth: {{token}}'
    ```
 
 6. **Validate Responses**: Check HTTP status codes
+
    ```bash
    ./curly GET api.com && echo "Success!" || echo "Failed!"
    ```
@@ -444,13 +443,16 @@ api_request POST /projects -d '{"name":"New Project"}'
 ### Common Issues
 
 **Problem**: "Missing required dependencies: curl jq"
+
 - **Solution**: Install the missing tools using your package manager
 
 **Problem**: "Variable 'xxx' not found"
+
 - **Solution**: Check available variables with `./curly --list`
 - Ensure the variable was saved in a previous request
 
 **Problem**: "Failed to extract value with expression"
+
 - **Solution**: Test your jq expression separately:
   ```bash
   ./curly GET api.com -o test.json
@@ -458,21 +460,25 @@ api_request POST /projects -d '{"name":"New Project"}'
   ```
 
 **Problem**: "HTTP 401 Unauthorized"
+
 - **Solution**: Check if your token is expired
 - Verify the Authorization header format
 
 **Problem**: State not persisting between calls
+
 - **Solution**: Ensure you're running curly from the same directory
 - Check if `.curly-state` file exists and is readable
 
 ### Debug Mode
 
 Run with `-v` for detailed output:
+
 ```bash
 ./curly GET https://api.example.com -v
 ```
 
 This shows:
+
 - Variable loading
 - Template replacements
 - Full curl command
@@ -482,6 +488,7 @@ This shows:
 ## Security Considerations
 
 1. **State File Security**: The `.curly-state` file may contain sensitive data like tokens
+
    ```bash
    # Add to .gitignore
    echo ".curly-state*" >> .gitignore
@@ -491,6 +498,7 @@ This shows:
    ```
 
 2. **Token Management**: Consider token expiration
+
    ```bash
    # Save token expiry time
    ./curly POST api.com/login \
@@ -505,28 +513,3 @@ This shows:
    ./curly POST api.com/login \
      -d "{\"password\":\"$API_PASSWORD\"}"
    ```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
-## License
-
-MIT License - See LICENSE file for details
-
-## Acknowledgments
-
-- Built with bash, curl, and jq
-- Inspired by the need for simple API testing and automation
-- Thanks to all contributors and users
-
-## Support
-
-For issues, questions, or suggestions, please:
-1. Check this README and the `--help` command
-2. Search existing issues
-3. Open a new issue with details
-
----
-
-Made with ❤️ for developers who love the command line
