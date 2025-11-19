@@ -8,7 +8,7 @@ set -euo pipefail
 # Script configuration
 readonly SCRIPT_NAME="curly"
 readonly VERSION="1.0.0"
-readonly STATE_FILE="./.curly-state"
+STATE_FILE="./.curly-state"
 readonly TEMP_DIR="${TMPDIR:-/tmp}"
 readonly RESPONSE_FILE="${TEMP_DIR}/${SCRIPT_NAME}-response-$$.json"
 readonly HEADERS_FILE="${TEMP_DIR}/${SCRIPT_NAME}-headers-$$.txt"
@@ -350,9 +350,9 @@ extract_values() {
 
     debug "Extracting: $var_name = jq '$jq_expr'"
 
-    # Extract value using jq
+    # Extract value using jq (using -rc for compact output)
     local value
-    if ! value=$(jq -r "$jq_expr" < "$response_file" 2>/dev/null); then
+    if ! value=$(jq -rc "$jq_expr" < "$response_file" 2>/dev/null); then
         warn "Failed to extract value with expression: $jq_expr"
         return 1
     fi
