@@ -89,6 +89,7 @@ cd curly
 | Option                  | Description              | Example                            |
 | ----------------------- | ------------------------ | ---------------------------------- |
 | `-d, --data <json>`     | Request body (JSON)      | `-d '{"name":"John"}'`             |
+| `-T, --upload-file <file>` | Upload file from path | `-T ./document.pdf`                |
 | `-H, --header <header>` | HTTP header (repeatable) | `-H 'Authorization: Bearer token'` |
 | `-s, --save <var=jq>`   | Save response value      | `-s 'id=.data.id'`                 |
 | `-o, --output <file>`   | Save response to file    | `-o response.json`                 |
@@ -213,6 +214,40 @@ last_http_code=200
 ./curly DELETE 'https://api.example.com/projects/{{project_id}}' \
   -H 'Authorization: Bearer {{token}}'
 ```
+
+### File Uploads
+
+Curly supports file uploads using the `-T` or `--upload-file` option (similar to curl):
+
+```bash
+# Upload a PDF document
+./curly PUT https://api.example.com/upload/document.pdf \
+  -T ./document.pdf \
+  -H 'Authorization: Bearer {{token}}'
+
+# Upload a JSON configuration file
+./curly PUT https://api.example.com/config/settings \
+  -T ./config.json \
+  -H 'Authorization: Bearer {{token}}'
+
+# Upload an image file
+./curly POST https://api.example.com/user/avatar \
+  -T ./avatar.png \
+  -H 'Authorization: Bearer {{token}}' \
+  -s 'avatar_url=.url'
+
+# Upload with custom Content-Type
+./curly PUT https://api.example.com/data/custom \
+  -T ./data.bin \
+  -H 'Content-Type: application/custom-type' \
+  -H 'Authorization: Bearer {{token}}'
+```
+
+**Note:**
+- The `-T` option automatically uses the file content as the request body
+- Content-Type is auto-detected based on file extension (json, xml, pdf, jpg, png, etc.)
+- You can override the Content-Type with an explicit `-H 'Content-Type: ...'` header
+- Cannot be used together with `-d/--data` option
 
 ### Pagination
 

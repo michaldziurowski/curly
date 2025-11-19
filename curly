@@ -52,6 +52,7 @@ ${YELLOW}Arguments:${NC}
 
 ${YELLOW}Options:${NC}
   -d, --data <json>           Request body (supports templates)
+  -T, --upload-file <file>    Upload file from path
   -H, --header <header>       HTTP header (repeatable, supports templates)
   -s, --save <var=jq_expr>    Save response value (repeatable)
                               Example: -s 'token=.auth.token'
@@ -91,6 +92,16 @@ ${YELLOW}Examples:${NC}
     -H 'Authorization: Bearer {{token}}' \\
     -d '{"name":"Project","owner":{{user_id}}}' \\
     -s 'project_id=.id'
+
+  # Upload a file
+  $SCRIPT_NAME PUT https://api.example.com/upload/document.pdf \\
+    -T ./document.pdf \\
+    -H 'Authorization: Bearer {{token}}'
+
+  # Upload JSON file with explicit content type
+  $SCRIPT_NAME PUT https://api.example.com/data/config \\
+    -T ./config.json \\
+    -H 'Content-Type: application/json'
 
 ${YELLOW}Template Syntax:${NC}
   Use {{variable_name}} in URLs, headers, or request bodies to reference
@@ -381,6 +392,7 @@ main() {
     local method=""
     local url=""
     local data=""
+    local upload_file=""
     local headers=()
     local saves=()
     local output_file=""
@@ -437,6 +449,11 @@ main() {
                 [[ $# -eq 0 ]] && error "$1 requires an argument"
                 data="$1"
                 ;;
+            -T|--upload-file)
+                shift
+                [[ $# -eq 0 ]] && error "$1 requires an argument"
+                upload_file="$1"
+                ;;
             -H|--header)
                 shift
                 [[ $# -eq 0 ]] && error "$1 requires an argument"
@@ -488,6 +505,14 @@ main() {
     [[ -z "$method" ]] && error "HTTP method is required"
     [[ -z "$url" ]] && error "URL is required"
 
+    # Validate conflicting options
+    [[ -n "$data" && -n "$upload_file" ]] && error "Cannot use both -d/--data and -T/--upload-file together"
+
+    # Validate file exists if upload_file is specified
+    if [[ -n "$upload_file" ]]; then
+        [[ ! -f "$upload_file" ]] && error "File not found: $upload_file"
+    fi
+
     # Validate HTTP method
     case "$method" in
         GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS|TRACE|CONNECT)
@@ -501,13 +526,47 @@ main() {
     debug "Processing templates..."
     url=$(replace_templates "$url")
 
-    # Process data if provided
+    # Process data or file upload
     local curl_data_args=()
     if [[ -n "$data" ]]; then
         data=$(replace_templates "$data")
         curl_data_args+=(-H "Content-Type: application/json")
         curl_data_args+=(-d "$data")
         debug "Request body: $data"
+    elif [[ -n "$upload_file" ]]; then
+        # File upload using -T
+        curl_data_args+=(-T "$upload_file")
+        debug "Uploading file: $upload_file"
+
+        # Determine Content-Type based on file extension if not provided
+        local content_type_set=0
+        for header in "${headers[@]}"; do
+            if [[ "$header" =~ ^[Cc]ontent-[Tt]ype: ]]; then
+                content_type_set=1
+                break
+            fi
+        done
+
+        # Auto-detect content type if not set
+        if [[ $content_type_set -eq 0 ]]; then
+            local file_ext="${upload_file##*.}"
+            case "${file_ext,,}" in
+                json) curl_data_args+=(-H "Content-Type: application/json") ;;
+                xml)  curl_data_args+=(-H "Content-Type: application/xml") ;;
+                txt)  curl_data_args+=(-H "Content-Type: text/plain") ;;
+                html) curl_data_args+=(-H "Content-Type: text/html") ;;
+                csv)  curl_data_args+=(-H "Content-Type: text/csv") ;;
+                pdf)  curl_data_args+=(-H "Content-Type: application/pdf") ;;
+                jpg|jpeg) curl_data_args+=(-H "Content-Type: image/jpeg") ;;
+                png)  curl_data_args+=(-H "Content-Type: image/png") ;;
+                gif)  curl_data_args+=(-H "Content-Type: image/gif") ;;
+                zip)  curl_data_args+=(-H "Content-Type: application/zip") ;;
+                tar)  curl_data_args+=(-H "Content-Type: application/x-tar") ;;
+                gz)   curl_data_args+=(-H "Content-Type: application/gzip") ;;
+                *)    curl_data_args+=(-H "Content-Type: application/octet-stream") ;;
+            esac
+            debug "Auto-detected Content-Type for .$file_ext"
+        fi
     fi
 
     # Process headers
